@@ -1,0 +1,12 @@
+{
+  "name": "calc-cap",
+  "private": true,
+  "workspaces": [
+    "applications/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.12"
+  }
+}
