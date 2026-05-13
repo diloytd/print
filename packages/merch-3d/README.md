@@ -32,36 +32,38 @@ import { ModelViewer, PRODUCT_TYPES } from '@diloytd/merch-3d';
 import '@diloytd/merch-3d/style.css';
 ```
 
-## Публикация в GitHub Packages
+## Публикация в GitHub Packages через GitHub Actions
 
-1. Создайте GitHub token с правами `write:packages` и `read:packages`.
-2. Выполните логин:
+1. Запушьте изменения в GitHub.
+2. Откройте репозиторий `diloytd/print`.
+3. Перейдите в `Actions`.
+4. Выберите workflow `Publish Merch 3D Package`.
+5. Нажмите `Run workflow`.
 
-```bash
-npm login --scope=@diloytd --registry=https://npm.pkg.github.com
-```
-
-Вместо пароля вставьте GitHub token.
-
-3. Соберите пакет:
+Локально перед публикацией можно проверить сборку:
 
 ```bash
 npm run build -w @diloytd/merch-3d
-```
-
-4. Проверьте содержимое архива:
-
-```bash
 npm run pack:check -w @diloytd/merch-3d
 ```
 
-5. Опубликуйте:
+После первой публикации откройте пакет на GitHub и проверьте видимость:
 
-```bash
-npm run publish:github -w @diloytd/merch-3d
+```text
+Package page -> Package settings -> Change visibility -> Public
 ```
 
 ## Важно про 3D-модели
 
-Компоненты ожидают модели по путям из `PRODUCT_GLTF_URL`, например `/models/mug.gltf`.
-В приложении-потребителе эти файлы должны быть доступны из `public/models`.
+Модель кружки `mug.gltf` уже попадает в сборку пакета.
+
+Остальные модели из `PRODUCT_GLTF_URL` пока остаются внешними путями:
+
+```text
+/models/umbrella.glb
+/models/cap.glb
+/models/tshirt.glb
+/models/bag.glb
+```
+
+Если используете эти типы изделий, положите соответствующие файлы в `public/models` приложения-потребителя.

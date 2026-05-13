@@ -32,7 +32,7 @@
     "build": "vite build",
     "pack:check": "npm pack --dry-run",
     "prepublishOnly": "npm run build",
-    "publish:github": "npm publish --registry=https://npm.pkg.github.com"
+    "publish:github": "npm publish --registry=https://npm.pkg.github.com --access public"
   },
   "peerDependencies": {
     "@react-three/drei": "^10.0.6",

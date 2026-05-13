@@ -1,3 +1,5 @@
+import mugGltfUrl from '../../public/models/mug.gltf?url';
+
 const printModules = import.meta.glob('../img/*.{svg,png,jpg,jpeg,webp}', {
   eager: true,
   import: 'default',
@@ -50,7 +52,7 @@ export const PRODUCT_GLTF_URL = {
   umbrella: '/models/umbrella.glb',
   cap:      '/models/cap.glb',
   tshirt:   '/models/tshirt.glb',
-  mug:      '/models/mug.gltf',
+  mug:      mugGltfUrl,
   bag:      '/models/bag.glb',
 };
 
