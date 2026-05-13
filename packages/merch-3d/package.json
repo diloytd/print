@@ -1,0 +1,48 @@
+{
+  "name": "@diloytd/merch-3d",
+  "version": "0.1.0",
+  "description": "Reusable React components for the 3D merch calculator.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diloytd/print.git",
+    "directory": "packages/merch-3d"
+  },
+  "main": "./dist/merch-3d.umd.cjs",
+  "module": "./dist/merch-3d.js",
+  "exports": {
+    ".": {
+      "import": "./dist/merch-3d.js",
+      "require": "./dist/merch-3d.umd.cjs"
+    },
+    "./style.css": "./dist/merch-3d.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "vite build",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run build",
+    "publish:github": "npm publish --registry=https://npm.pkg.github.com"
+  },
+  "peerDependencies": {
+    "@react-three/drei": "^10.0.6",
+    "@react-three/fiber": "^9.0.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.173.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^8.0.12"
+  }
+}
