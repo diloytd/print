@@ -15,10 +15,20 @@ export const VIEWER_MODEL_TARGET_SIZE = 9.45;
  * @param {THREE.BufferGeometry | null} props.geometry - Геометрия принта, спроецированная на поверхность изделия.
  * @param {string} props.animalId - Идентификатор выбранного встроенного SVG-принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
  * @returns {JSX.Element | null} Mesh принта или null, если текстура ещё не готова.
  */
-export const PrintMesh = ({ geometry, animalId, customPrintUrl }) => {
+export const PrintMesh = ({ geometry, animalId, customPrintUrl, printRotationDeg = 0 }) => {
   const map = usePrintTexture(animalId, customPrintUrl);
+
+  useLayoutEffect(() => {
+    if (!map) return;
+
+    map.center.set(0.5, 0.5);
+    map.rotation = THREE.MathUtils.degToRad(printRotationDeg);
+    map.needsUpdate = true;
+  }, [map, printRotationDeg]);
+
   if (!map || !geometry) return null;
 
   return (
@@ -121,9 +131,10 @@ export const calculateViewerFitScale = (object, targetSize = VIEWER_MODEL_TARGET
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
  * @returns {JSX.Element} Группа с моделью изделия и привязанным принтом.
  */
-const BaseProductModel = ({ productType, productColor, animalId, customPrintUrl }) => {
+const BaseProductModel = ({ productType, productColor, animalId, customPrintUrl, printRotationDeg = 0 }) => {
   const url = PRODUCT_GLTF_URL[productType];
   const { scene } = useGLTF(url);
   const clone = useMemo(() => scene.clone(true), [scene]);
@@ -161,6 +172,7 @@ const BaseProductModel = ({ productType, productColor, animalId, customPrintUrl 
         geometry={printTransform.geometry}
         animalId={animalId}
         customPrintUrl={customPrintUrl}
+        printRotationDeg={printRotationDeg}
       />
     </group>
   );

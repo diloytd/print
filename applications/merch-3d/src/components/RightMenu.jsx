@@ -13,12 +13,14 @@
  * @param {React.RefObject<HTMLInputElement | null>} props.fileInputRef
  * @param {() => void} props.onUploadClick
  * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onCustomPrintChange
+ * @param {(direction: number) => void} props.onPrintRotate
  * @param {React.RefObject<HTMLInputElement | null>} props.modelFileInputRef
  * @param {boolean} props.hasCustomModel
  * @param {string} props.customModelError
  * @param {() => void} props.onCustomModelUploadClick
  * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onCustomModelChange
  * @param {() => void} props.onCustomModelReset
+ * @param {() => void} props.onCustomModelFrontSide
  */
 const RightMenu = ({
   animals,
@@ -33,12 +35,14 @@ const RightMenu = ({
   fileInputRef,
   onUploadClick,
   onCustomPrintChange,
+  onPrintRotate,
   modelFileInputRef,
   hasCustomModel,
   customModelError,
   onCustomModelUploadClick,
   onCustomModelChange,
   onCustomModelReset,
+  onCustomModelFrontSide,
 }) => (
   <aside className="right-menu" aria-label="Принт и цвета">
     <section className="right-menu__section">
@@ -74,6 +78,22 @@ const RightMenu = ({
       <button type="button" className="upload-btn" onClick={onUploadClick}>
         Загрузить свой принт
       </button>
+      <div className="print-rotation-actions" role="group" aria-label="Поворот принта">
+        <button
+          type="button"
+          className="upload-btn upload-btn--secondary"
+          onClick={() => onPrintRotate(-1)}
+        >
+          Повернуть -90°
+        </button>
+        <button
+          type="button"
+          className="upload-btn upload-btn--secondary"
+          onClick={() => onPrintRotate(1)}
+        >
+          Повернуть +90°
+        </button>
+      </div>
       <input
         ref={modelFileInputRef}
         type="file"
@@ -100,6 +120,14 @@ const RightMenu = ({
           Сбросить
         </button>
       </div>
+      <button
+        type="button"
+        className="upload-btn upload-btn--secondary"
+        disabled={!hasCustomModel}
+        onClick={onCustomModelFrontSide}
+      >
+        Лицевая сторона
+      </button>
       {customModelError ? (
         <p className="right-menu__error" role="alert">
           {customModelError}

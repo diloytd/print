@@ -61,8 +61,10 @@ const ModelLoader = () => (
  * @param {string} props.sceneBg
  * @param {string} props.animalId
  * @param {string | null} props.customPrintUrl
+ * @param {number} props.printRotationDeg
  * @param {string | null} props.customModelUrl
  * @param {'glb' | 'gltf' | 'obj' | 'stl' | null} props.customModelFormat
+ * @param {number} props.customPrintFrontVersion
  * @param {(error: Error) => void} props.onCustomModelError
  */
 const ModelViewer = ({
@@ -71,8 +73,10 @@ const ModelViewer = ({
   sceneBg,
   animalId,
   customPrintUrl,
+  printRotationDeg,
   customModelUrl,
   customModelFormat,
+  customPrintFrontVersion,
   onCustomModelError,
 }) => {
   const isCustomModel = Boolean(customModelUrl && customModelFormat);
@@ -120,6 +124,8 @@ const ModelViewer = ({
                 productColor={productColor}
                 animalId={animalId}
                 customPrintUrl={customPrintUrl}
+                printRotationDeg={printRotationDeg}
+                customPrintFrontVersion={customPrintFrontVersion}
               />
             ) : (
               <ProductModel
@@ -127,6 +133,7 @@ const ModelViewer = ({
                 productColor={productColor}
                 animalId={animalId}
                 customPrintUrl={customPrintUrl}
+                printRotationDeg={printRotationDeg}
               />
             )}
           </ModelErrorBoundary>

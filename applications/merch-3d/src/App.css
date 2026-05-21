@@ -155,6 +155,12 @@
   gap: 0.5rem;
 }
 
+.print-rotation-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
 .upload-btn {
   margin-top: 0.65rem;
   width: 100%;

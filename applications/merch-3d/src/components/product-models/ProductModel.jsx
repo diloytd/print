@@ -20,9 +20,10 @@ const PRODUCT_COMPONENTS = {
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
  * @returns {JSX.Element} Конкретная модель товара.
  */
-const ProductModel = ({ productType, productColor, animalId, customPrintUrl }) => {
+const ProductModel = ({ productType, productColor, animalId, customPrintUrl, printRotationDeg = 0 }) => {
   const Component = PRODUCT_COMPONENTS[productType];
 
   if (Component) {
@@ -31,6 +32,7 @@ const ProductModel = ({ productType, productColor, animalId, customPrintUrl }) =
         productColor={productColor}
         animalId={animalId}
         customPrintUrl={customPrintUrl}
+        printRotationDeg={printRotationDeg}
       />
     );
   }
@@ -41,6 +43,7 @@ const ProductModel = ({ productType, productColor, animalId, customPrintUrl }) =
       productColor={productColor}
       animalId={animalId}
       customPrintUrl={customPrintUrl}
+      printRotationDeg={printRotationDeg}
     />
   );
 };

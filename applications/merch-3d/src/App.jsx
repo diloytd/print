@@ -17,6 +17,8 @@ const App = () => {
   const [customModelUrl, setCustomModelUrl] = useState(null);
   const [customModelFormat, setCustomModelFormat] = useState(null);
   const [customModelError, setCustomModelError] = useState('');
+  const [customPrintFrontVersion, setCustomPrintFrontVersion] = useState(0);
+  const [printRotationDeg, setPrintRotationDeg] = useState(0);
   const printFileRef = useRef(null);
   const modelFileRef = useRef(null);
   const isCustomModel = Boolean(customModelUrl);
@@ -72,6 +74,15 @@ const App = () => {
   const handleUploadClick = () => printFileRef.current?.click();
 
   /**
+   * Поворачивает текущий принт на 90 градусов без изменения его позиции на поверхности.
+   * @param {number} direction - Направление поворота: 1 вправо, -1 влево.
+   * @returns {void}
+   */
+  const handlePrintRotate = useCallback((direction) => {
+    setPrintRotationDeg((rotation) => (rotation + direction * 90 + 360) % 360);
+  }, []);
+
+  /**
    * Открывает системный выбор файла для пользовательской 3D-модели.
    */
   const handleCustomModelUploadClick = () => {
@@ -122,6 +133,7 @@ const App = () => {
 
     const nextUrl = URL.createObjectURL(file);
     setCustomModelError('');
+    setCustomPrintFrontVersion(0);
     setCustomModelFormat(format);
     setCustomModelUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -136,6 +148,7 @@ const App = () => {
    */
   const handleCustomModelReset = useCallback(() => {
     setCustomModelError('');
+    setCustomPrintFrontVersion(0);
     setCustomModelFormat(null);
     setCustomModelUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -149,12 +162,23 @@ const App = () => {
    */
   const handleCustomModelError = useCallback(() => {
     setCustomModelError('Не удалось прочитать 3D-модель. Файл некорректный или содержит неподдержанные данные.');
+    setCustomPrintFrontVersion(0);
     setCustomModelFormat(null);
     setCustomModelUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
   }, []);
+
+  /**
+   * Назначает текущую видимую сторону пользовательской модели лицевой стороной для принта.
+   * @returns {void}
+   */
+  const handleCustomModelFrontSide = useCallback(() => {
+    if (!isCustomModel) return;
+    setCustomModelError('');
+    setCustomPrintFrontVersion((version) => version + 1);
+  }, [isCustomModel]);
 
   return (
     <div className="app">
@@ -174,8 +198,10 @@ const App = () => {
           sceneBg={sceneBg}
           animalId={animalId}
           customPrintUrl={customPrintUrl}
+          printRotationDeg={printRotationDeg}
           customModelUrl={customModelUrl}
           customModelFormat={customModelFormat}
+          customPrintFrontVersion={customPrintFrontVersion}
           onCustomModelError={handleCustomModelError}
         />
         <RightMenu
@@ -191,12 +217,14 @@ const App = () => {
           fileInputRef={printFileRef}
           onUploadClick={handleUploadClick}
           onCustomPrintChange={handleCustomPrintChange}
+          onPrintRotate={handlePrintRotate}
           modelFileInputRef={modelFileRef}
           hasCustomModel={isCustomModel}
           customModelError={customModelError}
           onCustomModelUploadClick={handleCustomModelUploadClick}
           onCustomModelChange={handleCustomModelChange}
           onCustomModelReset={handleCustomModelReset}
+          onCustomModelFrontSide={handleCustomModelFrontSide}
         />
       </main>
     </div>

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from 'react';
-import { useLoader } from '@react-three/fiber';
+import { useLoader, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -10,6 +10,7 @@ import { PrintMesh } from './BaseProductModel.jsx';
 
 const CUSTOM_PRODUCT_TYPE = 'custom';
 const CUSTOM_MODEL_BOX_SIZE = new THREE.Vector3(2.2, 2.4, 2.2);
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 /**
  * Клонирует материал mesh-объекта или создаёт базовый материал для форматов без материалов, например STL.
@@ -108,15 +109,124 @@ const applyCustomModelColor = (model, productColor) => {
 };
 
 /**
+ * Возвращает все видимые mesh-объекты пользовательской модели для raycast-поиска поверхности.
+ * @param {THREE.Object3D} model - Нормализованная пользовательская модель.
+ * @returns {THREE.Mesh[]} Mesh-объекты с геометрией.
+ */
+const getCustomModelMeshes = (model) => {
+  const meshes = [];
+
+  model.traverse((child) => {
+    if (!child.isMesh || !child.geometry || child.visible === false) return;
+    meshes.push(child);
+  });
+
+  return meshes;
+};
+
+/**
+ * Создаёт две оси плоскости принта, перпендикулярные выбранной нормали лицевой стороны.
+ * @param {THREE.Vector3} normal - Наружная нормаль выбранной стороны модели.
+ * @returns {{ right: THREE.Vector3, up: THREE.Vector3 }} Оси X/Y для плоскости принта.
+ */
+const createPrintBasis = (normal) => {
+  const helperUp = Math.abs(normal.dot(WORLD_UP)) > 0.94
+    ? new THREE.Vector3(1, 0, 0)
+    : WORLD_UP;
+  const right = new THREE.Vector3().crossVectors(helperUp, normal).normalize();
+  const up = new THREE.Vector3().crossVectors(normal, right).normalize();
+
+  return { right, up };
+};
+
+/**
+ * Считает размер модели в осях будущего принта, чтобы принт был пропорциональным выбранной стороне.
+ * @param {THREE.Box3} box - Bounding box нормализованной модели.
+ * @param {THREE.Vector3} right - Горизонтальная ось плоскости принта.
+ * @param {THREE.Vector3} up - Вертикальная ось плоскости принта.
+ * @returns {{ width: number, height: number }} Размеры bbox в координатах плоскости принта.
+ */
+const getProjectedBoxSize = (box, right, up) => {
+  const corners = [
+    new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+    new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+    new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+    new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+    new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+    new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+    new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+    new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+  ];
+  const rightValues = corners.map((corner) => corner.dot(right));
+  const upValues = corners.map((corner) => corner.dot(up));
+
+  return {
+    width: Math.max(...rightValues) - Math.min(...rightValues),
+    height: Math.max(...upValues) - Math.min(...upValues),
+  };
+};
+
+/**
+ * Рассчитывает позицию и поворот принта на стороне модели, которая сейчас обращена к камере.
+ * @param {THREE.Object3D} model - Нормализованная пользовательская модель.
+ * @param {THREE.Camera} camera - Активная камера Canvas.
+ * @returns {{ position: [number, number, number], scale: [number, number, number], rotation: [number, number, number] }} Трансформ принта.
+ */
+const calculateCameraFacingPrintPosition = (model, camera) => {
+  const box = new THREE.Box3().setFromObject(model);
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+
+  const cameraPosition = new THREE.Vector3();
+  camera.getWorldPosition(cameraPosition);
+  const normal = cameraPosition.sub(center).normalize();
+  const { right, up } = createPrintBasis(normal);
+  const projectedSize = getProjectedBoxSize(box, right, up);
+  const printWidth = Math.min(projectedSize.width, projectedSize.height) * 0.32;
+  const maxSize = Math.max(size.x, size.y, size.z);
+  const offset = Math.max(printWidth * 0.025, 0.004);
+  const raycaster = new THREE.Raycaster(
+    center.clone().add(normal.clone().multiplyScalar(maxSize * 1.25)),
+    normal.clone().negate(),
+    0,
+    maxSize * 2.5,
+  );
+  const [hit] = raycaster.intersectObjects(getCustomModelMeshes(model), true);
+  const point = hit?.point ?? center.clone().add(normal.clone().multiplyScalar(maxSize * 0.5));
+  const rotation = new THREE.Euler().setFromRotationMatrix(
+    new THREE.Matrix4().makeBasis(right, up, normal),
+  );
+  const position = point.add(normal.clone().multiplyScalar(offset));
+
+  return {
+    position: [position.x, position.y, position.z],
+    scale: [printWidth, printWidth, 1],
+    rotation: [rotation.x, rotation.y, rotation.z],
+  };
+};
+
+/**
  * Рендерит уже загруженный Object3D: нормализует размер, красит материалы и размещает принт.
  * @param {object} props - Параметры пользовательской модели.
  * @param {THREE.Object3D} props.source - Загруженная GLTF/OBJ сцена.
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного встроенного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
+ * @param {number} props.customPrintFrontVersion - Версия выбранной пользователем лицевой стороны.
  * @returns {JSX.Element} Группа с пользовательской моделью и принтом.
  */
-const PreparedCustomModel = ({ source, productColor, animalId, customPrintUrl }) => {
+const PreparedCustomModel = ({
+  source,
+  productColor,
+  animalId,
+  customPrintUrl,
+  printRotationDeg = 0,
+  customPrintFrontVersion,
+}) => {
+  const { camera } = useThree();
   const clone = useMemo(() => createBoxFittedCustomModel(source), [source]);
   const layout = PRODUCT_LAYOUT[CUSTOM_PRODUCT_TYPE];
   const [printTransform, setPrintTransform] = useState({
@@ -127,14 +237,16 @@ const PreparedCustomModel = ({ source, productColor, animalId, customPrintUrl })
   });
 
   useLayoutEffect(() => {
-    const transform = calculatePrintPosition(clone, CUSTOM_PRODUCT_TYPE);
+    const transform = customPrintFrontVersion > 0
+      ? calculateCameraFacingPrintPosition(clone, camera)
+      : calculatePrintPosition(clone, CUSTOM_PRODUCT_TYPE);
     const geometry = createConformedPrintGeometry(clone, CUSTOM_PRODUCT_TYPE, transform);
     setPrintTransform({ ...transform, geometry });
 
     return () => {
       geometry.dispose();
     };
-  }, [clone]);
+  }, [camera, clone, customPrintFrontVersion]);
 
   useLayoutEffect(() => {
     applyCustomModelColor(clone, productColor);
@@ -151,6 +263,7 @@ const PreparedCustomModel = ({ source, productColor, animalId, customPrintUrl })
         geometry={printTransform.geometry}
         animalId={animalId}
         customPrintUrl={customPrintUrl}
+        printRotationDeg={printRotationDeg}
       />
     </group>
   );
@@ -163,9 +276,11 @@ const PreparedCustomModel = ({ source, productColor, animalId, customPrintUrl })
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного встроенного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
+ * @param {number} props.customPrintFrontVersion - Версия выбранной пользователем лицевой стороны.
  * @returns {JSX.Element} Подготовленная пользовательская модель.
  */
-const CustomGltfModel = ({ url, productColor, animalId, customPrintUrl }) => {
+const CustomGltfModel = ({ url, productColor, animalId, customPrintUrl, printRotationDeg, customPrintFrontVersion }) => {
   const { scene } = useGLTF(url);
 
   return (
@@ -174,6 +289,8 @@ const CustomGltfModel = ({ url, productColor, animalId, customPrintUrl }) => {
       productColor={productColor}
       animalId={animalId}
       customPrintUrl={customPrintUrl}
+      printRotationDeg={printRotationDeg}
+      customPrintFrontVersion={customPrintFrontVersion}
     />
   );
 };
@@ -185,9 +302,11 @@ const CustomGltfModel = ({ url, productColor, animalId, customPrintUrl }) => {
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного встроенного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
+ * @param {number} props.customPrintFrontVersion - Версия выбранной пользователем лицевой стороны.
  * @returns {JSX.Element} Подготовленная пользовательская модель.
  */
-const CustomObjModel = ({ url, productColor, animalId, customPrintUrl }) => {
+const CustomObjModel = ({ url, productColor, animalId, customPrintUrl, printRotationDeg, customPrintFrontVersion }) => {
   const object = useLoader(OBJLoader, url);
 
   return (
@@ -196,6 +315,8 @@ const CustomObjModel = ({ url, productColor, animalId, customPrintUrl }) => {
       productColor={productColor}
       animalId={animalId}
       customPrintUrl={customPrintUrl}
+      printRotationDeg={printRotationDeg}
+      customPrintFrontVersion={customPrintFrontVersion}
     />
   );
 };
@@ -208,9 +329,11 @@ const CustomObjModel = ({ url, productColor, animalId, customPrintUrl }) => {
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного встроенного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
+ * @param {number} props.customPrintFrontVersion - Версия выбранной пользователем лицевой стороны.
  * @returns {JSX.Element} Подготовленная пользовательская модель.
  */
-const CustomStlModel = ({ url, productColor, animalId, customPrintUrl }) => {
+const CustomStlModel = ({ url, productColor, animalId, customPrintUrl, printRotationDeg, customPrintFrontVersion }) => {
   const geometry = useLoader(STLLoader, url);
   const object = useMemo(() => {
     const material = new THREE.MeshStandardMaterial({
@@ -229,6 +352,8 @@ const CustomStlModel = ({ url, productColor, animalId, customPrintUrl }) => {
       productColor={productColor}
       animalId={animalId}
       customPrintUrl={customPrintUrl}
+      printRotationDeg={printRotationDeg}
+      customPrintFrontVersion={customPrintFrontVersion}
     />
   );
 };
@@ -241,9 +366,19 @@ const CustomStlModel = ({ url, productColor, animalId, customPrintUrl }) => {
  * @param {string} props.productColor - CSS hex-цвет изделия.
  * @param {string} props.animalId - Идентификатор выбранного встроенного принта.
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
+ * @param {number} props.printRotationDeg - Угол поворота текстуры принта в градусах.
+ * @param {number} props.customPrintFrontVersion - Версия выбранной пользователем лицевой стороны.
  * @returns {JSX.Element | null} Пользовательская модель или null для неподдержанного формата.
  */
-const CustomProductModel = ({ url, format, productColor, animalId, customPrintUrl }) => {
+const CustomProductModel = ({
+  url,
+  format,
+  productColor,
+  animalId,
+  customPrintUrl,
+  printRotationDeg = 0,
+  customPrintFrontVersion,
+}) => {
   if (format === 'stl') {
     return (
       <CustomStlModel
@@ -251,6 +386,8 @@ const CustomProductModel = ({ url, format, productColor, animalId, customPrintUr
         productColor={productColor}
         animalId={animalId}
         customPrintUrl={customPrintUrl}
+        printRotationDeg={printRotationDeg}
+        customPrintFrontVersion={customPrintFrontVersion}
       />
     );
   }
@@ -262,6 +399,8 @@ const CustomProductModel = ({ url, format, productColor, animalId, customPrintUr
         productColor={productColor}
         animalId={animalId}
         customPrintUrl={customPrintUrl}
+        printRotationDeg={printRotationDeg}
+        customPrintFrontVersion={customPrintFrontVersion}
       />
     );
   }
@@ -273,6 +412,8 @@ const CustomProductModel = ({ url, format, productColor, animalId, customPrintUr
         productColor={productColor}
         animalId={animalId}
         customPrintUrl={customPrintUrl}
+        printRotationDeg={printRotationDeg}
+        customPrintFrontVersion={customPrintFrontVersion}
       />
     );
   }
