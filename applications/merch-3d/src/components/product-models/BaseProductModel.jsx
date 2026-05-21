@@ -6,6 +6,8 @@ import { PRODUCT_GLTF_URL, PRODUCT_LAYOUT, PRODUCT_MATERIAL } from '../../consta
 import { usePrintTexture } from '../../hooks/usePrintTexture.js';
 import { calculatePrintPosition, createConformedPrintGeometry } from '../../utils/calculatePrintPosition.js';
 
+export const VIEWER_MODEL_TARGET_SIZE = 9.45;
+
 /**
  * Плоский mesh с текстурой принта на поверхности модели.
  *
@@ -15,7 +17,7 @@ import { calculatePrintPosition, createConformedPrintGeometry } from '../../util
  * @param {string | null} props.customPrintUrl - URL пользовательского принта, если он загружен.
  * @returns {JSX.Element | null} Mesh принта или null, если текстура ещё не готова.
  */
-const PrintMesh = ({ geometry, animalId, customPrintUrl }) => {
+export const PrintMesh = ({ geometry, animalId, customPrintUrl }) => {
   const map = usePrintTexture(animalId, customPrintUrl);
   if (!map || !geometry) return null;
 
@@ -42,7 +44,7 @@ const PrintMesh = ({ geometry, animalId, customPrintUrl }) => {
  * @param {THREE.Object3D} model - Клонированная GLTF-сцена изделия.
  * @returns {void}
  */
-const prepareModelGeometry = (model) => {
+export const prepareModelGeometry = (model) => {
   model.position.set(0, 0, 0);
 
   model.traverse((child) => {
@@ -66,7 +68,7 @@ const prepareModelGeometry = (model) => {
  * @param {{ roughness: number, metalness: number }} pbr - PBR-параметры материала.
  * @returns {void}
  */
-const applyProductMaterial = (model, productColor, pbr) => {
+export const applyProductMaterial = (model, productColor, pbr) => {
   model.traverse((child) => {
     if (!child.isMesh || !child.material) return;
 
@@ -89,6 +91,26 @@ const applyProductMaterial = (model, productColor, pbr) => {
       mat.needsUpdate = true;
     });
   });
+};
+
+/**
+ * Рассчитывает масштаб, который вписывает корневую группу модели в единый размер viewer-а.
+ * Используется для пользовательских моделей, чтобы файлы в любых единицах не вылезали за сцену.
+ * @param {THREE.Object3D} object - Корневая группа с моделью и принтом.
+ * @param {number} targetSize - Желаемый максимальный размер bounding box в сцене.
+ * @returns {number | null} Новый scalar scale или null, если размер модели нельзя посчитать.
+ */
+export const calculateViewerFitScale = (object, targetSize = VIEWER_MODEL_TARGET_SIZE) => {
+  object.updateWorldMatrix(true, true);
+
+  const box = new THREE.Box3().setFromObject(object);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const maxSize = Math.max(size.x, size.y, size.z);
+
+  if (!Number.isFinite(maxSize) || maxSize <= 0) return null;
+
+  return object.scale.x * (targetSize / maxSize);
 };
 
 /**

@@ -57,6 +57,12 @@
   gap: 0.45rem;
 }
 
+.left-menu__hint {
+  margin: 0 0 0.7rem;
+  font-size: 0.78rem;
+  color: #5a6172;
+}
+
 .left-menu__btn {
   text-align: left;
   padding: 0.55rem 0.7rem;
@@ -69,6 +75,11 @@
 
 .left-menu__btn:hover {
   border-color: rgba(21, 101, 192, 0.45);
+}
+
+.left-menu__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .left-menu__btn--active {
@@ -87,6 +98,13 @@
   margin: 0 0 0.6rem;
   font-size: 0.8rem;
   color: #5a6172;
+}
+
+.right-menu__error {
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #b71c1c;
 }
 
 .right-menu__animals {
@@ -127,6 +145,16 @@
   color: #2f3542;
 }
 
+.right-menu input[type='file'] {
+  display: none;
+}
+
+.model-upload-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
 .upload-btn {
   margin-top: 0.65rem;
   width: 100%;
@@ -141,6 +169,16 @@
 .upload-btn:hover {
   border-style: solid;
   background: #fff;
+}
+
+.upload-btn--secondary {
+  border-style: solid;
+  color: #374151;
+}
+
+.upload-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 .swatches {
@@ -218,6 +256,27 @@
 .model-viewer__hint--error {
   border-color: #c62828;
   color: #4a0a0a;
+}
+
+.model-viewer__hint--loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.model-viewer__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(21, 101, 192, 0.18);
+  border-top-color: #1565c0;
+  border-radius: 50%;
+  animation: model-spinner 0.75s linear infinite;
+}
+
+@keyframes model-spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 960px) {

@@ -13,6 +13,12 @@
  * @param {React.RefObject<HTMLInputElement | null>} props.fileInputRef
  * @param {() => void} props.onUploadClick
  * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onCustomPrintChange
+ * @param {React.RefObject<HTMLInputElement | null>} props.modelFileInputRef
+ * @param {boolean} props.hasCustomModel
+ * @param {string} props.customModelError
+ * @param {() => void} props.onCustomModelUploadClick
+ * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onCustomModelChange
+ * @param {() => void} props.onCustomModelReset
  */
 const RightMenu = ({
   animals,
@@ -27,6 +33,12 @@ const RightMenu = ({
   fileInputRef,
   onUploadClick,
   onCustomPrintChange,
+  modelFileInputRef,
+  hasCustomModel,
+  customModelError,
+  onCustomModelUploadClick,
+  onCustomModelChange,
+  onCustomModelReset,
 }) => (
   <aside className="right-menu" aria-label="Принт и цвета">
     <section className="right-menu__section">
@@ -62,6 +74,37 @@ const RightMenu = ({
       <button type="button" className="upload-btn" onClick={onUploadClick}>
         Загрузить свой принт
       </button>
+      <input
+        ref={modelFileInputRef}
+        type="file"
+        accept=".glb,.gltf,.obj,.stl,model/gltf-binary,model/gltf+json,model/stl"
+        aria-label="Загрузить 3D модель"
+        disabled={hasCustomModel}
+        onChange={onCustomModelChange}
+      />
+      <div className="model-upload-actions">
+        <button
+          type="button"
+          className="upload-btn"
+          disabled={hasCustomModel}
+          onClick={onCustomModelUploadClick}
+        >
+          Загрузить 3D модель
+        </button>
+        <button
+          type="button"
+          className="upload-btn upload-btn--secondary"
+          disabled={!hasCustomModel}
+          onClick={onCustomModelReset}
+        >
+          Сбросить
+        </button>
+      </div>
+      {customModelError ? (
+        <p className="right-menu__error" role="alert">
+          {customModelError}
+        </p>
+      ) : null}
     </section>
 
     <section className="right-menu__section">

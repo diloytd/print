@@ -75,6 +75,7 @@ export const PRODUCT_MATERIAL = {
   tshirt:   { roughness: 0.92, metalness: 0.0 },  // хлопок
   mug:      { roughness: 0.30, metalness: 0.0 },  // керамика
   bag:      { roughness: 0.75, metalness: 0.0 },  // бумага
+  custom:   { roughness: 0.72, metalness: 0.0 },  // пользовательская модель
 };
 
 /**
@@ -136,6 +137,12 @@ export const PRODUCT_LAYOUT = {
     modelPosition: [0, -0.1, 0],
     modelRotation: [0.05, 0.2, 0],
     print: { anchor: [0.5, 0.54, 1], offsetZ: 0.0009, widthFraction: 0.288, rotation: [0.03, 0, 0] },
+  },
+  custom: {
+    modelScale: 1,
+    modelPosition: [0, 0, 0],
+    modelRotation: [0, 0, 0],
+    print: { anchor: [0.5, 0.55, 1], offsetZ: 0.004, widthFraction: 0.32 },
   },
 };
 
